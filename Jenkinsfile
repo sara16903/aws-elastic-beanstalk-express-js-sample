@@ -37,7 +37,9 @@ pipeline {
                 docker { image 'node:16'; reuseNode true }
             }
             steps {
-                // Fails the stage (and pipeline) if High/Critical vulnerabilities are found
+                // Save full audit output as JSON for the archive, regardless of outcome,
+                // then re-run in normal mode so the High/Critical threshold still fails the build.
+                sh 'npm audit --json > npm-audit-report.json || true'
                 sh 'npm audit --audit-level=high'
             }
         }
@@ -68,6 +70,7 @@ pipeline {
     post {
         always {
             echo "Pipeline finished: ${currentBuild.currentResult}"
+            archiveArtifacts artifacts: 'npm-audit-report.json', allowEmptyArchive: true
         }
         failure {
             echo "Build failed — check the Security Scan stage first if vulnerabilities were the cause."
